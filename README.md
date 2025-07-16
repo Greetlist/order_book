@@ -6,10 +6,10 @@
 1. 无限深度的order book
 更倾向于用map数据结构来存价格，在价格下面用双向链表来存order
 
-*为了更方便地找到某个order，需要用order的unique id来作为key，value为指向order的指针或者iterator(`std::list`的iterator是稳定的)*
-*数据结构选`std::unordered_map`, 不用考虑key是uint64还是string*
+**为了更方便地找到某个order，需要用order的unique id来作为key，value为指向order的指针或者iterator(`std::list`的iterator是稳定的)
+数据结构选`std::unordered_map`, 为了不用考虑key是uint64还是string**
 
-- Add/Find: 添加一个新的价格、寻找一个特定的价格时间复杂度: O(logM), M是已经有的价格档位, 找到对应价格的链表之后，插入直接是在尾部，所以是O(1)
+- Add/Find: 添加一个新的价格、寻找一个特定的价格时间复杂度: O(logM), M是已经有的价格档位, 找到对应价格的链表之后，插入直接是在尾部，所以是O(logM)
 
 - Modify: O(1), 常数级别, 根据`order_id`找到对应的单子直接修改即可
 
@@ -32,7 +32,7 @@
 ### 一些想法
 1. 按照现在最小价格变动单位为0.01元的情况来看, 涨跌幅10%来算, [300/688 20%, 北交所30%]
 
-10元股, 有(10*0.1*100) = 100个价格档位(Ask or Bid), 按照价格最高的茅台:(2628*0.1*100) = 26280个价格档位(Ask or Bid)
+10元股, 有`(10*0.1*100) = 100`个价格档位(Ask or Bid), 按照价格最高的茅台:`(2628*0.1*100) = 26280`个价格档位(Ask or Bid)
 
 2. 经过benchmark，可以发现，档位在400左右的时候，无论是`std::find`、`std::binary_search`、`map.find`所需要的时间都是差不多的，所以400应该是一个关键的分水岭
 如果是更大的，无限深度的档位的话，`std::find`这种O(N)的算法就开始逐渐疲软
