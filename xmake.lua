@@ -1,9 +1,18 @@
 add_rules("mode.debug", "mode.release")
 
+add_requires("benchmark")
+
 target("order_book")
     set_kind("binary")
     add_files("src/*.cc")
     set_languages("c++20")
+
+target("test")
+    add_packages("benchmark")
+    set_kind("binary")
+    add_files("test/*.cc")
+    set_languages("c++20")
+    set_warnings("all", "error")
 
 --
 -- If you want to known more usage about xmake, please see https://xmake.io
