@@ -1,11 +1,13 @@
 add_rules("mode.debug", "mode.release")
 
-add_requires("benchmark")
+add_requires("benchmark", "glog", "gflags")
 
 target("order_book")
+    add_packages("glog", "gflags")
     set_kind("binary")
     add_files("src/*.cc")
     set_languages("c++20")
+    set_warnings("all", "error")
 
 target("test")
     add_packages("benchmark")
