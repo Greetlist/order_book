@@ -24,7 +24,7 @@ struct Order {
 };
 
 struct Price {
-  Price(double p) : price(p) {}
+  Price(double p) : price(p), total_volume(0) {}
   ~Price() = default;
   double price;
   uint64_t total_volume;

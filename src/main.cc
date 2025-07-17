@@ -11,6 +11,10 @@ int main(int argc, char** argv) {
     Order* order = new Order("688001-SH-stock", req_id++, 100, 123123, 123123, 12.30, OrderSide::Buy);
     order_book->AddOrder(order);
   }
+  for (int i = 0; i < 99; ++i) {
+    Order* order = new Order("688001-SH-stock", req_id++, 100, 123123, 123123, 12.30, OrderSide::Sell);
+    order_book->AddOrder(order);
+  }
   order_book->Print();
   return 0;
 }

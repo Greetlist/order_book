@@ -18,36 +18,35 @@ bool OrderBook::Init() {
   InitRatio();
   int total_level = 2 * (std::ceil(prev_close_ * change_ratio_ / price_change_unit_)) + 10; //最后加的10为了防止小数计算时候的溢出
   buy_ = new std::vector<Price*>(total_level, nullptr);
-  double cur_price = prev_close_ * (1 + change_ratio_);
+  sell_ = new std::vector<Price*>(total_level, nullptr);
+  double cur_price = std::ceil(prev_close_ * (1 - change_ratio_) * 100) / 100;
   for (int i = 0; i < total_level; ++i) {
     buy_->at(i) = new Price(cur_price);
-    cur_price -= price_change_unit_;
-  }
-
-  cur_price = prev_close_ * (1 - change_ratio_);
-  sell_ = new std::vector<Price*>(total_level, nullptr);
-  for (int i = 0; i < total_level; ++i) {
     sell_->at(i) = new Price(cur_price);
+    if (cur_price == prev_close_) {
+      mid_index_ = i;
+    }
     cur_price += price_change_unit_;
   }
   return true;
 }
 
 bool OrderBook::AddOrder(Order* order) {
-  std::vector<Price*>* side;
+  std::vector<Price*>* side = nullptr;
   if (order->side == OrderSide::Buy && order->price >= sell_best_price_) {
     side = sell_;
+    MatchOrder(side, order);
   } else if (order->side == OrderSide::Sell && order->price <= buy_best_price_) {
     side = buy_;
+    MatchOrder(side, order);
   }
-  MatchOrder(side, order);
 
   if (order->volume <= 0) {
     return true;
   }
 
   side = order->side == OrderSide::Buy ? buy_ : sell_;
-  int offset = GetIndex(order->price, order->side);
+  int offset = GetIndex(order->price);
   side->at(offset)->orders.push_back(order);
   side->at(offset)->total_volume += order->volume;
   auto it = side->at(offset)->orders.end();
@@ -57,22 +56,23 @@ bool OrderBook::AddOrder(Order* order) {
 }
 
 void OrderBook::MatchOrder(std::vector<Price*>* side, Order* order) {
-  int index = side == buy_ ? GetIndex(buy_best_price_, OrderSide::Buy) : GetIndex(sell_best_price_, OrderSide::Sell);
-  while (order->volume > 0) {
-    auto begin = side_->at(index)->orders.begin();
-    auto end = side_->at(index)->orders.end();
+  int index = GetIndex(order->price);
+  while (true) {
+    auto begin = side->at(index)->orders.begin();
+    auto end = side->at(index)->orders.end();
     for (; begin != end; begin++) {
       Order* cur_order = *begin;
       if (cur_order->volume > order->volume) {
         order->volume = 0;
         cur_order->volume -= order->volume;
-        side_->at(index)->total_volume -= order->volume;
+        side->at(index)->total_volume -= order->volume;
       } else {
         order->volume -= cur_order->volume;
-        side_->at(index)->orders.erase(begin);
-        side_->at(index)->total_volume -= cur_order->volume;
+        side->at(index)->orders.erase(begin);
+        side->at(index)->total_volume -= cur_order->volume;
         order_map_.erase(cur_order->order_id);
       }
+      if (order->volume <= 0) return;
     }
   }
 }
@@ -104,12 +104,12 @@ double OrderBook::GetHighestBuyPrice() {
 }
 
 int OrderBook::GetTotalVolume(OrderSide side, double price) {
-  int index = GetIndex(side, price);
+  int index = GetIndex(price);
   std::vector<Price*>* s = side == OrderSide::Buy ? buy_ : sell_;
   return s->at(index)->total_volume;
 }
 
-int OrderBook::GetTotalVolume(int start_level, int end_level) {
+int OrderBook::GetTotalVolume(OrderSide side, int start_level, int end_level) {
   return 0;
 }
 
@@ -121,8 +121,8 @@ int OrderBook::GetOrderCount(int start_level, int end_level) {
   return 0;
 }
 
-int OrderBook::GetIndex(double price, OrderSide side) {
-  return 0;
+int OrderBook::GetIndex(double price) {
+  return mid_index_ + (prev_close_ - price) * 100;
 }
 
 void OrderBook::Print() {
