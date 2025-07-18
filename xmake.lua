@@ -15,6 +15,15 @@ target("test")
     add_files("test/*.cc")
     set_languages("c++20")
     set_warnings("all", "error")
+    add_includedirs("src/")
+
+target("benchmark")
+    add_packages("benchmark", "glog", "gflags")
+    set_kind("binary")
+    add_files("benchmark/*.cc")
+    set_languages("c++20")
+    set_warnings("all", "error")
+    add_includedirs("src/")
 
 --
 -- If you want to known more usage about xmake, please see https://xmake.io
