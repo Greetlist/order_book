@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <initializer_list>
 #include <iostream>
+#include <limits>
 #include <glog/logging.h>
 
 #include "struct.h"
@@ -45,6 +46,7 @@ private:
   int mid_index_;
   int GetIndex(double price);
   void InitRatio();
+  bool ApproximatelyEqual(double a, double b);
 };
 
 #endif

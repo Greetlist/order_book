@@ -23,7 +23,7 @@ bool OrderBook::Init() {
   for (int i = 0; i < total_level; ++i) {
     buy_->at(i) = new Price(cur_price);
     sell_->at(i) = new Price(cur_price);
-    if (cur_price == prev_close_) {
+    if (ApproximatelyEqual(cur_price, prev_close_)) {
       mid_index_ = i;
     }
     cur_price += price_change_unit_;
@@ -47,6 +47,7 @@ bool OrderBook::AddOrder(Order* order) {
 
   side = order->side == OrderSide::Buy ? buy_ : sell_;
   int offset = GetIndex(order->price);
+  //LOG(INFO) << order->price << ", " << prev_close_ << ", " << offset << ", " << side->at(0)->price;
   side->at(offset)->orders.push_back(order);
   side->at(offset)->total_volume += order->volume;
   auto it = side->at(offset)->orders.end();
@@ -122,7 +123,7 @@ int OrderBook::GetOrderCount(int start_level, int end_level) {
 }
 
 int OrderBook::GetIndex(double price) {
-  return mid_index_ + (prev_close_ - price) * 100;
+  return mid_index_ + (price - prev_close_) * 100;
 }
 
 void OrderBook::Print() {
@@ -167,4 +168,13 @@ void OrderBook::InitRatio() {
   } else if (uid_.find_first_of("920") != std::string::npos) {
     change_ratio_ = 0.3;
   }
+}
+
+bool OrderBook::ApproximatelyEqual(double a, double b) {
+  double max_num = std::max({1.0, std::fabs(a), std::fabs(b)});
+  //LOG(INFO)
+  //  << "[" << a << "] " << " [" << b << "] "
+  //  << std::fabs(a - b) << ", " << max_num * std::numeric_limits<double>::epsilon()
+  //  << ", " << (std::fabs(a - b) <= max_num * std::numeric_limits<double>::epsilon() * 100);
+  return std::fabs(a - b) <= max_num * std::numeric_limits<double>::epsilon() * 100;
 }
