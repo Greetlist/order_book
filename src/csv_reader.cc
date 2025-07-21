@@ -1,6 +1,6 @@
 #include "csv_reader.h"
 
-CsvReader::CsvReader(const std::string& csv_path) : csv_path_(csv_path) {}
+CsvReader::CsvReader(const std::string& csv_path, bool skip_header) : skip_header_(skip_header), csv_path_(csv_path) {}
 
 void CsvReader::ResetFileStream() {
   input_ = std::ifstream(csv_path_);
@@ -39,11 +39,11 @@ std::vector<std::string> CsvReader::ReadColumnByIndex(int index) {
 }
 
 bool CsvReader::HasNextLine() {
-  return input_.eof();
+  return !input_.eof();
 }
 
 std::string CsvReader::ReadLine() {
   std::string line;
   std::getline(input_, line);
-  return line;
+  return (skip_header_ && line_index_++ == 0) ? std::string{""} : line;
 }

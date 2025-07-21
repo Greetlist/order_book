@@ -1,14 +1,10 @@
 #include "order_book.h"
 
-OrderBook::OrderBook(std::initializer_list<std::string> info, double prev_close) {
+OrderBook::OrderBook(std::initializer_list<std::string> info, double prev_close) : prev_close_(prev_close), last_price_(prev_close) {
   auto it = info.begin();
   uid_ = *(it);
   exchange_id_ = *(it+1);
   finance_type_ = *(it+2);
-  prev_close_ = prev_close;
-  last_price_ = prev_close;
-  buy_best_price_ = prev_close;
-  sell_best_price_ = prev_close;
 }
 
 OrderBook::~OrderBook() {
@@ -28,17 +24,17 @@ bool OrderBook::Init() {
     }
     cur_price += price_change_unit_;
   }
+  buy_best_price_ = std::ceil(prev_close_ * (1 - change_ratio_) * 100) / 100;
+  sell_best_price_ = std::ceil(prev_close_ * (1 + change_ratio_) * 100) / 100;
   return true;
 }
 
 bool OrderBook::AddOrder(Order* order) {
   std::vector<Price*>* side = nullptr;
   if (order->side == OrderSide::Buy && order->price >= sell_best_price_) {
-    side = sell_;
-    MatchOrder(side, order);
+    MatchBuyOrder(order);
   } else if (order->side == OrderSide::Sell && order->price <= buy_best_price_) {
-    side = buy_;
-    MatchOrder(side, order);
+    MatchSellOrder(order);
   }
 
   if (order->volume <= 0) {
@@ -53,24 +49,57 @@ bool OrderBook::AddOrder(Order* order) {
   auto it = side->at(offset)->orders.end();
   it--;
   order_map_.insert({order->order_id, it});
+  if (order->side == OrderSide::Buy) {
+    buy_best_price_ = std::max(buy_best_price_, order->price);
+  } else {
+    sell_best_price_ = std::min(sell_best_price_, order->price);
+  }
   return true;
 }
 
-void OrderBook::MatchOrder(std::vector<Price*>* side, Order* order) {
-  int index = GetIndex(order->price);
-  while (true) {
-    auto begin = side->at(index)->orders.begin();
-    auto end = side->at(index)->orders.end();
+void OrderBook::MatchBuyOrder(Order* order) {
+  int start_index = GetIndex(sell_best_price_);
+  int end_index = GetIndex(order->price);
+  for (int index = start_index; index <= end_index; ++index) {
+    if (sell_->at(index)->total_volume <= 0) continue;
+    auto begin = sell_->at(index)->orders.begin();
+    auto end = sell_->at(index)->orders.end();
+    for (; begin != end; begin++) {
+      Order* cur_order = *begin;
+      double trade_price = cur_order->price;
+      if (cur_order->volume > order->volume) {
+        order->volume = 0;
+        cur_order->volume -= order->volume;
+        sell_->at(index)->total_volume -= order->volume;
+      } else {
+        order->volume -= cur_order->volume;
+        sell_->at(index)->orders.erase(begin);
+        sell_->at(index)->total_volume -= cur_order->volume;
+        order_map_.erase(cur_order->order_id);
+      }
+      last_price_ = trade_price;
+      if (order->volume <= 0) return;
+    }
+  }
+}
+
+void OrderBook::MatchSellOrder(Order* order) {
+  int start_index = GetIndex(order->price);
+  int end_index = GetIndex(buy_best_price_);
+  for (int index = end_index; index >= start_index; --index) {
+    if (buy_->at(index)->total_volume <= 0) continue;
+    auto begin = buy_->at(index)->orders.begin();
+    auto end = buy_->at(index)->orders.end();
     for (; begin != end; begin++) {
       Order* cur_order = *begin;
       if (cur_order->volume > order->volume) {
         order->volume = 0;
         cur_order->volume -= order->volume;
-        side->at(index)->total_volume -= order->volume;
+        buy_->at(index)->total_volume -= order->volume;
       } else {
         order->volume -= cur_order->volume;
-        side->at(index)->orders.erase(begin);
-        side->at(index)->total_volume -= cur_order->volume;
+        buy_->at(index)->orders.erase(begin);
+        buy_->at(index)->total_volume -= cur_order->volume;
         order_map_.erase(cur_order->order_id);
       }
       if (order->volume <= 0) return;

@@ -11,8 +11,7 @@ enum class OrderSide {
 
 struct Order {
   Order();
-  Order(std::string&& uid, uint64_t id, uint64_t volume, uint64_t vendor_time, uint64_t local_time, double price, OrderSide side) : uid(uid), order_id(id), volume(volume), vendor_time(vendor_time), local_time(local_time), price(price), side(side) {
-  }
+  Order(std::string&& uid, uint64_t id, uint64_t volume, uint64_t vendor_time, uint64_t local_time, double price, OrderSide side) : uid(uid), order_id(id), volume(volume), vendor_time(vendor_time), local_time(local_time), price(price), side(side) {}
   ~Order();
   std::string uid;
   uint64_t order_id;
