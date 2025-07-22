@@ -8,6 +8,24 @@ OrderBook::OrderBook(std::initializer_list<std::string> info, double prev_close)
 }
 
 OrderBook::~OrderBook() {
+  int size = buy_->size();
+  for (int i = 0; i < size; ++i) {
+    auto begin = (*buy_)[i]->orders.begin();
+    auto end = (*buy_)[i]->orders.end();
+    for (; begin != end; begin++) {
+      delete *begin;
+    }
+  }
+  size = sell_->size();
+  for (int i = 0; i < size; ++i) {
+    auto begin = (*sell_)[i]->orders.begin();
+    auto end = (*sell_)[i]->orders.end();
+    for (; begin != end; begin++) {
+      delete *begin;
+    }
+  }
+  delete buy_;
+  delete sell_;
 }
 
 bool OrderBook::Init() {
@@ -43,7 +61,7 @@ bool OrderBook::AddOrder(Order* order) {
 
   side = order->side == OrderSide::Buy ? buy_ : sell_;
   int offset = GetIndex(order->price);
-  Price* price = side->at(offset);
+  Price* price = (*side)[offset];
   price->orders.push_back(order);
   price->total_volume += order->volume;
   auto it = price->orders.end();
@@ -78,6 +96,7 @@ void OrderBook::MatchBuyOrder(Order* order) {
         begin = price->orders.erase(begin);
         price->total_volume -= cur_order->volume;
         order_map_.erase(cur_order->order_id);
+        delete cur_order;
       }
       last_price_ = trade_price;
       if (order->volume <= 0) return;
@@ -106,6 +125,7 @@ void OrderBook::MatchSellOrder(Order* order) {
         begin = price->orders.erase(begin);
         price->total_volume -= cur_order->volume;
         order_map_.erase(cur_order->order_id);
+        delete cur_order;
       }
       last_price_ = trade_price;
       if (order->volume <= 0) return;

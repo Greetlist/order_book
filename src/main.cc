@@ -1,20 +1,59 @@
 #include <iostream>
 
 #include "order_book.h"
-
-static int req_id = 0;
+#include "csv_reader.h"
 
 int main(int argc, char** argv) {
-  OrderBook *order_book = new OrderBook({"688001", "SH", "stock"}, 12.85);
+  OrderBook *order_book = new OrderBook({"601225", "SH", "stock"}, 19.57);
   order_book->Init();
-  for (int i = 0; i < 100; ++i) {
-    Order* order = new Order("688001-SH-stock", req_id++, 100, 123123, 123123, 12.30, OrderSide::Buy);
-    order_book->AddOrder(order);
-  }
-  for (int i = 0; i < 99; ++i) {
-    Order* order = new Order("688001-SH-stock", req_id++, 100, 123123, 123123, 12.30, OrderSide::Sell);
+  CsvReader reader("/home/greetlist/github_project/order_book/mock/601225-SH-stock_order.csv", true);
+  reader.ResetFileStream();
+  while (reader.HasNextLine()) {
+    std::string line = reader.ReadLine();
+    //std::cout << line << std::endl;
+    if (line.size() == 0) continue;
+    std::stringstream line_stream(line);
+    std::string cell;
+
+    std::string target;
+    std::string uid;
+    uint64_t req_id = 0;
+    uint64_t volume = 0;
+    uint64_t vendor_time = 0, local_time = 0;
+    double price = 0.00;
+    OrderSide side = OrderSide::Buy;
+
+    int cell_index = 0;
+    while (std::getline(line_stream, cell, ',')) {
+      switch (cell_index) {
+      case 0:
+        uid = cell;
+        break;
+      case 1:
+        req_id = std::stoull(cell);
+        break;
+      case 2:
+        volume = std::stoull(cell);
+        break;
+      case 3:
+        vendor_time = std::stoull(cell);
+        break;
+      case 4:
+        local_time = std::stoull(cell);
+        break;
+      case 5:
+        price = std::stod(cell);
+        break;
+      case 6:
+        side = cell == "Buy" ? OrderSide::Buy : OrderSide::Sell;
+        break;
+      }
+      cell_index++;
+    }
+    Order* order = new Order(std::move(uid), req_id, volume, vendor_time, local_time, price, side);
     order_book->AddOrder(order);
   }
   order_book->Print();
+  delete order_book;
   return 0;
 }
