@@ -9,3 +9,6 @@ build/
 *.swp
 *.csv
 .gdb_history
+*.svg
+out.*
+perf.*

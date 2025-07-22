@@ -16,7 +16,6 @@ bool OrderBook::Init() {
   buy_ = new std::vector<Price*>(total_level, nullptr);
   sell_ = new std::vector<Price*>(total_level, nullptr);
   double cur_price = std::floor(prev_close_ * (1 - change_ratio_) * 100) / 100;
-  std::cout << cur_price << std::endl;
   for (int i = 0; i < total_level; ++i) {
     buy_->at(i) = new Price(cur_price);
     sell_->at(i) = new Price(cur_price);
@@ -44,11 +43,10 @@ bool OrderBook::AddOrder(Order* order) {
 
   side = order->side == OrderSide::Buy ? buy_ : sell_;
   int offset = GetIndex(order->price);
-  //std::cout << offset << std::endl;
-  //LOG(INFO) << order->price << ", " << prev_close_ << ", " << offset << ", " << side->at(0)->price;
-  side->at(offset)->orders.push_back(order);
-  side->at(offset)->total_volume += order->volume;
-  auto it = side->at(offset)->orders.end();
+  Price* price = side->at(offset);
+  price->orders.push_back(order);
+  price->total_volume += order->volume;
+  auto it = price->orders.end();
   it--;
   order_map_.insert({order->order_id, it});
   if (order->side == OrderSide::Buy) {
@@ -63,8 +61,8 @@ void OrderBook::MatchBuyOrder(Order* order) {
   int start_index = GetIndex(sell_best_price_);
   int end_index = GetIndex(order->price);
   for (int index = start_index; index <= end_index; ++index) {
-    Price* price = sell_->at(index);
-    //std::cout << price->price << ", " << price->total_volume << std::endl;
+    //Price* price = sell_->at(index);
+    Price* price = (*sell_)[index];
     if (price->total_volume <= 0) continue;
     auto begin = price->orders.begin();
     auto end = price->orders.end();
@@ -91,7 +89,8 @@ void OrderBook::MatchSellOrder(Order* order) {
   int start_index = GetIndex(order->price);
   int end_index = GetIndex(buy_best_price_);
   for (int index = end_index; index >= start_index; --index) {
-    Price* price = buy_->at(index);
+    //Price* price = buy_->at(index);
+    Price* price = (*buy_)[index];
     if (price->total_volume <= 0) continue;
     auto begin = price->orders.begin();
     auto end = price->orders.end();

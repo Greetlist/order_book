@@ -61,6 +61,6 @@ static void test_order_book(benchmark::State& state) {
   }
 }
 //BENCHMARK(map_find)->Unit(benchmark::kMillisecond);
-BENCHMARK(test_order_book);
+BENCHMARK(test_order_book)->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();
