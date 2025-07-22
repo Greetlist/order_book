@@ -15,7 +15,8 @@ bool OrderBook::Init() {
   int total_level = 2 * (std::ceil(prev_close_ * change_ratio_ / price_change_unit_)) + 10; //最后加的10为了防止小数计算时候的溢出
   buy_ = new std::vector<Price*>(total_level, nullptr);
   sell_ = new std::vector<Price*>(total_level, nullptr);
-  double cur_price = std::ceil(prev_close_ * (1 - change_ratio_) * 100) / 100;
+  double cur_price = std::floor(prev_close_ * (1 - change_ratio_) * 100) / 100;
+  std::cout << cur_price << std::endl;
   for (int i = 0; i < total_level; ++i) {
     buy_->at(i) = new Price(cur_price);
     sell_->at(i) = new Price(cur_price);
@@ -24,7 +25,7 @@ bool OrderBook::Init() {
     }
     cur_price += price_change_unit_;
   }
-  buy_best_price_ = std::ceil(prev_close_ * (1 - change_ratio_) * 100) / 100;
+  buy_best_price_ = std::floor(prev_close_ * (1 - change_ratio_) * 100) / 100;
   sell_best_price_ = std::ceil(prev_close_ * (1 + change_ratio_) * 100) / 100;
   return true;
 }
@@ -43,6 +44,7 @@ bool OrderBook::AddOrder(Order* order) {
 
   side = order->side == OrderSide::Buy ? buy_ : sell_;
   int offset = GetIndex(order->price);
+  //std::cout << offset << std::endl;
   //LOG(INFO) << order->price << ", " << prev_close_ << ", " << offset << ", " << side->at(0)->price;
   side->at(offset)->orders.push_back(order);
   side->at(offset)->total_volume += order->volume;
@@ -61,20 +63,22 @@ void OrderBook::MatchBuyOrder(Order* order) {
   int start_index = GetIndex(sell_best_price_);
   int end_index = GetIndex(order->price);
   for (int index = start_index; index <= end_index; ++index) {
-    if (sell_->at(index)->total_volume <= 0) continue;
-    auto begin = sell_->at(index)->orders.begin();
-    auto end = sell_->at(index)->orders.end();
+    Price* price = sell_->at(index);
+    //std::cout << price->price << ", " << price->total_volume << std::endl;
+    if (price->total_volume <= 0) continue;
+    auto begin = price->orders.begin();
+    auto end = price->orders.end();
     for (; begin != end; begin++) {
       Order* cur_order = *begin;
       double trade_price = cur_order->price;
       if (cur_order->volume > order->volume) {
         order->volume = 0;
         cur_order->volume -= order->volume;
-        sell_->at(index)->total_volume -= order->volume;
+        price->total_volume -= order->volume;
       } else {
         order->volume -= cur_order->volume;
-        sell_->at(index)->orders.erase(begin);
-        sell_->at(index)->total_volume -= cur_order->volume;
+        begin = price->orders.erase(begin);
+        price->total_volume -= cur_order->volume;
         order_map_.erase(cur_order->order_id);
       }
       last_price_ = trade_price;
@@ -87,21 +91,24 @@ void OrderBook::MatchSellOrder(Order* order) {
   int start_index = GetIndex(order->price);
   int end_index = GetIndex(buy_best_price_);
   for (int index = end_index; index >= start_index; --index) {
-    if (buy_->at(index)->total_volume <= 0) continue;
-    auto begin = buy_->at(index)->orders.begin();
-    auto end = buy_->at(index)->orders.end();
+    Price* price = buy_->at(index);
+    if (price->total_volume <= 0) continue;
+    auto begin = price->orders.begin();
+    auto end = price->orders.end();
     for (; begin != end; begin++) {
       Order* cur_order = *begin;
+      double trade_price = cur_order->price;
       if (cur_order->volume > order->volume) {
         order->volume = 0;
         cur_order->volume -= order->volume;
-        buy_->at(index)->total_volume -= order->volume;
+        price->total_volume -= order->volume;
       } else {
         order->volume -= cur_order->volume;
-        buy_->at(index)->orders.erase(begin);
-        buy_->at(index)->total_volume -= cur_order->volume;
+        begin = price->orders.erase(begin);
+        price->total_volume -= cur_order->volume;
         order_map_.erase(cur_order->order_id);
       }
+      last_price_ = trade_price;
       if (order->volume <= 0) return;
     }
   }
@@ -191,10 +198,9 @@ void OrderBook::Print() {
 }
 
 void OrderBook::InitRatio() {
-  if (uid_.find_first_of("300") != std::string::npos
-      || uid_.find_first_of("688") != std::string::npos) {
+  if (uid_.starts_with("300") || uid_.starts_with("688")) {
     change_ratio_ = 0.2;
-  } else if (uid_.find_first_of("920") != std::string::npos) {
+  } else if (uid_.starts_with("920")) {
     change_ratio_ = 0.3;
   }
 }

@@ -8,3 +8,4 @@ build/
 
 *.swp
 *.csv
+.gdb_history

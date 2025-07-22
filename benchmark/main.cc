@@ -8,14 +8,14 @@
 #include "csv_reader.h"
 
 static void test_order_book(benchmark::State& state) {
-  OrderBook *order_book = new OrderBook({"601225", "SH", "stock"}, 12.85);
+  OrderBook *order_book = new OrderBook({"601225", "SH", "stock"}, 19.57);
   order_book->Init();
   CsvReader reader("/home/greetlist/github_project/order_book/mock/601225-SH-stock_order.csv", true);
   reader.ResetFileStream();
   for (auto _ : state) {
     while (reader.HasNextLine()) {
       std::string line = reader.ReadLine();
-      std::cout << line << std::endl;
+      //std::cout << line << std::endl;
       if (line.size() == 0) continue;
       std::stringstream line_stream(line);
       std::string cell;
